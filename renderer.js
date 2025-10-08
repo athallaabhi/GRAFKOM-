@@ -267,7 +267,7 @@ function initBuffers() {
 
   // --- Monitor Components ---
   // 1. Monitor Screen Panel (the display itself)
-  addCuboidToScene(0, 0.275, 0.045, 2.0, 1.0, 0.01, screenImgColor); // Y was 0.5
+  addCuboidToScene(0, 0.275, 0.1, 2.0, 1.0, 0.01, screenImgColor); // Y was 0.5
 
   // 2. Monitor Bezel/Frame (white, wraps around the screen panel)
   addCuboidToScene(0, 0.275, 0.035, 2.1, 1.1, 0.03, white); // Y was 0.5
