@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tugas 1 Grafika Komputer</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Tugas 1 Grafika Komputer</h1>
+      <h2>Visualisasi Objek dari Lingkungan TI</h2>
+    </header>
+
+    <section id="photos">
+      <h3>Foto Objek</h3>
+      <img src="images/image.png" alt="Foto objek tampak jauh" />
+    </section>
+
+    <section id="viewer">
+      <h3>3D Viewer</h3>
+      <canvas id="glCanvas" width="800" height="600"></canvas>
+
+      <div id="controls">
+        <h4>Transformasi</h4>
+        <label
+          >Translate X
+          <input
+            type="range"
+            id="translateX"
+            min="-2"
+            max="2"
+            step="0.1"
+            value="0"
+        /></label>
+        <label
+          >Translate Y
+          <input
+            type="range"
+            id="translateY"
+            min="-2"
+            max="2"
+            step="0.1"
+            value="0"
+        /></label>
+        <label
+          >Translate Z
+          <input
+            type="range"
+            id="translateZ"
+            min="-2"
+            max="2"
+            step="0.1"
+            value="-2"
+        /></label>
+
+        <label
+          >Rotate X
+          <input type="range" id="rotateX" min="0" max="360" step="1" value="0"
+        /></label>
+        <label
+          >Rotate Y
+          <input type="range" id="rotateY" min="0" max="360" step="1" value="0"
+        /></label>
+        <label
+          >Rotate Z
+          <input type="range" id="rotateZ" min="0" max="360" step="1" value="0"
+        /></label>
+
+        <label
+          >Scale Uniform
+          <input
+            type="range"
+            id="scaleU"
+            min="0.1"
+            max="3"
+            step="0.1"
+            value="1"
+        /></label>
+        <label
+          >Scale X
+          <input
+            type="range"
+            id="scaleX"
+            min="0.1"
+            max="3"
+            step="0.1"
+            value="1"
+        /></label>
+        <label
+          >Scale Y
+          <input
+            type="range"
+            id="scaleY"
+            min="0.1"
+            max="3"
+            step="0.1"
+            value="1"
+        /></label>
+        <label
+          >Scale Z
+          <input
+            type="range"
+            id="scaleZ"
+            min="0.1"
+            max="3"
+            step="0.1"
+            value="1"
+        /></label>
+
+        <button id="reflectX">Reflect X</button>
+        <button id="reflectY">Reflect Y</button>
+        <button id="reflectZ">Reflect Z</button>
+
+        <button id="zoomIn">Zoom In</button>
+        <button id="zoomOut">Zoom Out</button>
+        <button id="invertColors">Invert Colors</button>
+        <button id="resetView">Reset View</button>
+
+        <h4>Lighting</h4>
+        <button id="toggleLighting">Turn Lighting OFF</button>
+        <label
+          >Light Position X
+          <input type="range" id="lightX" min="-5" max="5" step="0.1" value="1"
+        /></label>
+        <label
+          >Light Position Y
+          <input type="range" id="lightY" min="-5" max="5" step="0.1" value="1"
+        /></label>
+        <label
+          >Light Position Z
+          <input type="range" id="lightZ" min="-5" max="5" step="0.1" value="1"
+        /></label>
+      </div>
+    </section>
+
+    <section id="about">
+      <h3>Tentang Objek</h3>
+      <p>Nama Objek: <strong>Monitor PC</strong></p>
+      <p>Lokasi: Lab Pemrograman 2</p>
+      <p>
+        Deskripsi singkat: Monitor PC besar dengan warna yang tajam dan akurat.
+      </p>
+    </section>
+
+    <section id="team">
+      <h3>Tim</h3>
+      <p><strong>Athalla Abhinaya (5025231107)</strong></p>
+      <p><strong>Nicholas Abel Nathaniel (5025231098)</strong></p>
+    </section>
+
+    <!-- Scripts -->
+    <script src="shaders.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <script src="renderer.js"></script>
+    <script src="main.js"></script>
+  </body>
+</html>
