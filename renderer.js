@@ -1,8 +1,12 @@
 let gl;
 let shaderProgram;
-let vertexBuffer, colorBuffer, normalBuffer, indexBuffer;
+let vertexBuffer, colorBuffer, normalBuffer, texCoordBuffer;
+let indexBuffer, texturedIndexBuffer, nonTexturedIndexBuffer;
 let uModelViewMatrix, uProjectionMatrix;
 let allIndices = []; // <-- BUG FIX: Moved this to the global scope
+let texturedIndices = []; // Indices for objects with textures
+let nonTexturedIndices = []; // Indices for objects without textures
+let checkerboardTexture;
 
 let projectionMatrix = mat4.create();
 
@@ -64,8 +68,11 @@ function initRenderer(canvas) {
     shaderProgram,
     "uLightingEnabled"
   );
+  gl.useTextureLoc = gl.getUniformLocation(shaderProgram, "uUseTexture");
+  gl.textureMapLoc = gl.getUniformLocation(shaderProgram, "uTextureMap");
 
   initBuffers();
+  createCheckerboardTexture(); // Create checkerboard texture
   updateLighting(); // Initialize lighting
   gl.enable(gl.DEPTH_TEST);
   gl.clearColor(0.9, 0.9, 0.9, 1.0);
@@ -94,13 +101,15 @@ function initBuffers() {
     vertices,
     normals,
     colors,
+    texCoords,
     indices,
     a,
     b,
     c,
     d,
     color,
-    indexOffset
+    indexOffset,
+    useTexture = false
   ) {
     // Calculate normal using cross product (from material)
     const t1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
@@ -130,6 +139,24 @@ function initBuffers() {
     // Add colors
     colors.push(...color, ...color, ...color, ...color);
 
+    // Add texture coordinates
+    if (useTexture) {
+      // Standard texture coordinates for a quad
+      texCoords.push(
+        0.0,
+        0.0, // a
+        1.0,
+        0.0, // b
+        1.0,
+        1.0, // c
+        0.0,
+        1.0 // d
+      );
+    } else {
+      // Push dummy coordinates
+      texCoords.push(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    }
+
     // Add indices for two triangles
     indices.push(
       indexOffset,
@@ -143,7 +170,17 @@ function initBuffers() {
     return indexOffset + 4;
   }
 
-  const createCuboid = (x, y, z, width, height, depth, color, startIndex) => {
+  const createCuboid = (
+    x,
+    y,
+    z,
+    width,
+    height,
+    depth,
+    color,
+    startIndex,
+    useTexture = false
+  ) => {
     const hw = width / 2;
     const hh = height / 2;
     const hd = depth / 2;
@@ -161,6 +198,7 @@ function initBuffers() {
     const vertices = [];
     const normals = [];
     const colors = [];
+    const texCoords = [];
     const indices = [];
     let indexOffset = startIndex;
 
@@ -169,99 +207,141 @@ function initBuffers() {
       vertices,
       normals,
       colors,
+      texCoords,
       indices,
       v0,
       v1,
       v2,
       v3,
       color,
-      indexOffset
+      indexOffset,
+      useTexture
     ); // Front
     indexOffset = quad(
       vertices,
       normals,
       colors,
+      texCoords,
       indices,
       v5,
       v4,
       v7,
       v6,
       color,
-      indexOffset
+      indexOffset,
+      useTexture
     ); // Back
     indexOffset = quad(
       vertices,
       normals,
       colors,
+      texCoords,
       indices,
       v1,
       v5,
       v6,
       v2,
       color,
-      indexOffset
+      indexOffset,
+      useTexture
     ); // Right
     indexOffset = quad(
       vertices,
       normals,
       colors,
+      texCoords,
       indices,
       v4,
       v0,
       v3,
       v7,
       color,
-      indexOffset
+      indexOffset,
+      useTexture
     ); // Left
     indexOffset = quad(
       vertices,
       normals,
       colors,
+      texCoords,
       indices,
       v3,
       v2,
       v6,
       v7,
       color,
-      indexOffset
+      indexOffset,
+      useTexture
     ); // Top
     indexOffset = quad(
       vertices,
       normals,
       colors,
+      texCoords,
       indices,
       v4,
       v5,
       v1,
       v0,
       color,
-      indexOffset
+      indexOffset,
+      useTexture
     ); // Bottom
 
-    return { vertices, normals, colors, indices, newIndexOffset: indexOffset };
+    return {
+      vertices,
+      normals,
+      colors,
+      texCoords,
+      indices,
+      newIndexOffset: indexOffset,
+    };
   };
 
   let allVertices = [];
   let allNormals = [];
   let allColors = [];
+  let allTexCoords = [];
   allIndices = []; // Clear the global array before rebuilding
+  texturedIndices = []; // Clear textured indices
+  nonTexturedIndices = []; // Clear non-textured indices
   let currentIndexOffset = 0;
 
-  const addCuboidToScene = (x, y, z, width, height, depth, color) => {
-    const { vertices, normals, colors, indices, newIndexOffset } = createCuboid(
-      x,
-      y,
-      z,
-      width,
-      height,
-      depth,
-      color,
-      currentIndexOffset
-    );
+  const addCuboidToScene = (
+    x,
+    y,
+    z,
+    width,
+    height,
+    depth,
+    color,
+    useTexture = false
+  ) => {
+    const { vertices, normals, colors, texCoords, indices, newIndexOffset } =
+      createCuboid(
+        x,
+        y,
+        z,
+        width,
+        height,
+        depth,
+        color,
+        currentIndexOffset,
+        useTexture
+      );
     allVertices.push(...vertices);
     allNormals.push(...normals);
     allColors.push(...colors);
+    allTexCoords.push(...texCoords);
     allIndices.push(...indices);
+
+    // Add indices to appropriate array based on texture usage
+    if (useTexture) {
+      texturedIndices.push(...indices);
+    } else {
+      nonTexturedIndices.push(...indices);
+    }
+
     currentIndexOffset = newIndexOffset;
   };
 
@@ -272,8 +352,8 @@ function initBuffers() {
   // 2. Monitor Bezel/Frame (white, wraps around the screen panel)
   addCuboidToScene(0, 0.275, 0.035, 2.1, 1.1, 0.03, white); // Y was 0.5
 
-  // 3. Monitor Back Casing (silver, thicker part behind the frame)
-  addCuboidToScene(0, 0.275, -0.05, 2.05, 1.05, 0.1, silver); // Y was 0.5
+  // 3. Monitor Back Casing (silver, thicker part behind the frame) - WITH CHECKERBOARD TEXTURE
+  addCuboidToScene(0, 0.275, -0.05, 2.05, 1.05, 0.1, silver, true);
 
   // 4. Logo (on the back of the monitor)
   addCuboidToScene(0, 0.475, -0.105, 0.2, 0.3, 0.01, darkGrey); // Y was 0.7
@@ -354,11 +434,35 @@ function initBuffers() {
   gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allColors), gl.STATIC_DRAW);
 
+  texCoordBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array(allTexCoords),
+    gl.STATIC_DRAW
+  );
+
   indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(
     gl.ELEMENT_ARRAY_BUFFER,
     new Uint16Array(allIndices),
+    gl.STATIC_DRAW
+  );
+
+  texturedIndexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, texturedIndexBuffer);
+  gl.bufferData(
+    gl.ELEMENT_ARRAY_BUFFER,
+    new Uint16Array(texturedIndices),
+    gl.STATIC_DRAW
+  );
+
+  nonTexturedIndexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, nonTexturedIndexBuffer);
+  gl.bufferData(
+    gl.ELEMENT_ARRAY_BUFFER,
+    new Uint16Array(nonTexturedIndices),
     gl.STATIC_DRAW
   );
 
@@ -376,6 +480,11 @@ function initBuffers() {
   gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
   gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(aColor);
+
+  const aTexCoord = gl.getAttribLocation(shaderProgram, "aTexCoord");
+  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+  gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(aTexCoord);
 }
 
 function render() {
@@ -399,8 +508,23 @@ function render() {
   gl.uniformMatrix4fv(uModelViewMatrix, false, mvMatrix);
   gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
 
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.drawElements(gl.TRIANGLES, allIndices.length, gl.UNSIGNED_SHORT, 0);
+  // Draw non-textured objects first
+  gl.uniform1i(gl.useTextureLoc, false);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, nonTexturedIndexBuffer);
+  gl.drawElements(
+    gl.TRIANGLES,
+    nonTexturedIndices.length,
+    gl.UNSIGNED_SHORT,
+    0
+  );
+
+  // Draw textured objects
+  gl.uniform1i(gl.useTextureLoc, true);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, checkerboardTexture);
+  gl.uniform1i(gl.textureMapLoc, 0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, texturedIndexBuffer);
+  gl.drawElements(gl.TRIANGLES, texturedIndices.length, gl.UNSIGNED_SHORT, 0);
 
   requestAnimationFrame(render);
 }
@@ -485,4 +609,49 @@ function toggleLighting() {
   lightingEnabled = !lightingEnabled;
   updateLighting();
   return lightingEnabled;
+}
+
+// Function to create checkerboard texture
+function createCheckerboardTexture() {
+  // Create 64x64 checkerboard pattern like in example
+  var texSize = 64;
+  var numRows = 8;
+  var numCols = 8;
+  var image = new Array();
+
+  for (var i = 0; i < texSize; i++) image[i] = new Array();
+  for (var i = 0; i < texSize; i++)
+    for (var j = 0; j < texSize; j++)
+      image[i][j] = new Float32Array(4);
+
+  for (var i = 0; i < texSize; i++)
+    for (var j = 0; j < texSize; j++) {
+      var c = ((i & 0x8) == 0) ^ ((j & 0x8) == 0);
+      image[i][j] = [c, c, c, 1];
+    }
+
+  // Convert to Uint8Array
+  var image1 = new Uint8Array(4 * texSize * texSize);
+  for (var i = 0; i < texSize; i++)
+    for (var j = 0; j < texSize; j++)
+      for (var k = 0; k < 4; k++)
+        image1[4 * texSize * i + 4 * j + k] = 255 * image[i][j][k];
+
+  // Create and configure texture
+  checkerboardTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, checkerboardTexture);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    texSize,
+    texSize,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    image1
+  );
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 }
