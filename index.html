@@ -17,124 +17,293 @@
     </section>
 
     <section id="viewer">
-      <h3>3D Viewer</h3>
-      <canvas id="glCanvas" width="800" height="600"></canvas>
+      <h3>🖥️ 3D Monitor Viewer with Phong-Blinn Lighting</h3>
 
-      <div id="controls">
-        <h4>Transformasi</h4>
-        <label
-          >Translate X
-          <input
-            type="range"
-            id="translateX"
-            min="-2"
-            max="2"
-            step="0.1"
-            value="0"
-        /></label>
-        <label
-          >Translate Y
-          <input
-            type="range"
-            id="translateY"
-            min="-2"
-            max="2"
-            step="0.1"
-            value="0"
-        /></label>
-        <label
-          >Translate Z
-          <input
-            type="range"
-            id="translateZ"
-            min="-2"
-            max="2"
-            step="0.1"
-            value="-2"
-        /></label>
+      <div class="viewer-container">
+        <div class="canvas-wrapper">
+          <canvas id="glCanvas" width="800" height="600"></canvas>
+        </div>
 
-        <label
-          >Rotate X
-          <input type="range" id="rotateX" min="0" max="360" step="1" value="0"
-        /></label>
-        <label
-          >Rotate Y
-          <input type="range" id="rotateY" min="0" max="360" step="1" value="0"
-        /></label>
-        <label
-          >Rotate Z
-          <input type="range" id="rotateZ" min="0" max="360" step="1" value="0"
-        /></label>
+        <div id="controls">
+          <h4>⚙️ Controls</h4>
+          <label
+            >Translate X
+            <input
+              type="range"
+              id="translateX"
+              min="-2"
+              max="2"
+              step="0.1"
+              value="0"
+          /></label>
+          <label
+            >Translate Y
+            <input
+              type="range"
+              id="translateY"
+              min="-2"
+              max="2"
+              step="0.1"
+              value="0"
+          /></label>
+          <label
+            >Translate Z
+            <input
+              type="range"
+              id="translateZ"
+              min="-2"
+              max="2"
+              step="0.1"
+              value="-2"
+          /></label>
 
-        <label
-          >Scale Uniform
-          <input
-            type="range"
-            id="scaleU"
-            min="0.1"
-            max="3"
-            step="0.1"
-            value="1"
-        /></label>
-        <label
-          >Scale X
-          <input
-            type="range"
-            id="scaleX"
-            min="0.1"
-            max="3"
-            step="0.1"
-            value="1"
-        /></label>
-        <label
-          >Scale Y
-          <input
-            type="range"
-            id="scaleY"
-            min="0.1"
-            max="3"
-            step="0.1"
-            value="1"
-        /></label>
-        <label
-          >Scale Z
-          <input
-            type="range"
-            id="scaleZ"
-            min="0.1"
-            max="3"
-            step="0.1"
-            value="1"
-        /></label>
+          <label
+            >Rotate X
+            <input
+              type="range"
+              id="rotateX"
+              min="0"
+              max="360"
+              step="1"
+              value="0"
+          /></label>
+          <label
+            >Rotate Y
+            <input
+              type="range"
+              id="rotateY"
+              min="0"
+              max="360"
+              step="1"
+              value="0"
+          /></label>
+          <label
+            >Rotate Z
+            <input
+              type="range"
+              id="rotateZ"
+              min="0"
+              max="360"
+              step="1"
+              value="0"
+          /></label>
 
-        <button id="reflectX">Reflect X</button>
-        <button id="reflectY">Reflect Y</button>
-        <button id="reflectZ">Reflect Z</button>
+          <label
+            >Scale Uniform
+            <input
+              type="range"
+              id="scaleU"
+              min="0.1"
+              max="3"
+              step="0.1"
+              value="1"
+          /></label>
+          <label
+            >Scale X
+            <input
+              type="range"
+              id="scaleX"
+              min="0.1"
+              max="3"
+              step="0.1"
+              value="1"
+          /></label>
+          <label
+            >Scale Y
+            <input
+              type="range"
+              id="scaleY"
+              min="0.1"
+              max="3"
+              step="0.1"
+              value="1"
+          /></label>
+          <label
+            >Scale Z
+            <input
+              type="range"
+              id="scaleZ"
+              min="0.1"
+              max="3"
+              step="0.1"
+              value="1"
+          /></label>
 
-        <button id="zoomIn">Zoom In</button>
-        <button id="zoomOut">Zoom Out</button>
-        <button id="invertColors">Invert Colors</button>
-        <button id="resetView">Reset View</button>
+          <h5>Reflection</h5>
+          <div class="button-group">
+            <button id="reflectX">Reflect X</button>
+            <button id="reflectY">Reflect Y</button>
+            <button id="reflectZ">Reflect Z</button>
+          </div>
 
-        <h4>Lighting</h4>
-        <button id="toggleLighting">Turn Lighting ON/OFF</button>
-        <label
-          >Light Position X
-          <input type="range" id="lightX" min="-5" max="5" step="0.1" value="1"
-        /></label>
-        <label
-          >Light Position Y
-          <input type="range" id="lightY" min="-5" max="5" step="0.1" value="1"
-        /></label>
-        <label
-          >Light Position Z
-          <input type="range" id="lightZ" min="-5" max="5" step="0.1" value="1"
-        /></label>
+          <h5>Camera</h5>
+          <div class="button-group">
+            <button id="zoomIn">🔍 Zoom In</button>
+            <button id="zoomOut">🔍 Zoom Out</button>
+          </div>
+
+          <button id="resetView">🔄 Reset View</button>
+
+          <h4>💡 Lighting</h4>
+          <button id="toggleLighting">Turn Lighting ON/OFF</button>
+
+          <h5>Light Position</h5>
+          <label
+            >Light Position X
+            <input
+              type="range"
+              id="lightX"
+              min="-5"
+              max="5"
+              step="0.1"
+              value="1"
+            />
+            <span id="lightXValue">1.0</span>
+          </label>
+          <label
+            >Light Position Y
+            <input
+              type="range"
+              id="lightY"
+              min="-5"
+              max="5"
+              step="0.1"
+              value="1"
+            />
+            <span id="lightYValue">1.0</span>
+          </label>
+          <label
+            >Light Position Z
+            <input
+              type="range"
+              id="lightZ"
+              min="-5"
+              max="5"
+              step="0.1"
+              value="1"
+            />
+            <span id="lightZValue">1.0</span>
+          </label>
+
+          <h5>Ambient Light Color</h5>
+          <label
+            >Ambient Red
+            <input
+              type="range"
+              id="ambientR"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.2"
+            />
+            <span id="ambientRValue">0.20</span>
+          </label>
+          <label
+            >Ambient Green
+            <input
+              type="range"
+              id="ambientG"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.2"
+            />
+            <span id="ambientGValue">0.20</span>
+          </label>
+          <label
+            >Ambient Blue
+            <input
+              type="range"
+              id="ambientB"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.2"
+            />
+            <span id="ambientBValue">0.20</span>
+          </label>
+
+          <h5>Diffuse Light Color</h5>
+          <label
+            >Diffuse Red
+            <input
+              type="range"
+              id="diffuseR"
+              min="0"
+              max="1"
+              step="0.01"
+              value="1.0"
+            />
+            <span id="diffuseRValue">1.00</span>
+          </label>
+          <label
+            >Diffuse Green
+            <input
+              type="range"
+              id="diffuseG"
+              min="0"
+              max="1"
+              step="0.01"
+              value="1.0"
+            />
+            <span id="diffuseGValue">1.00</span>
+          </label>
+          <label
+            >Diffuse Blue
+            <input
+              type="range"
+              id="diffuseB"
+              min="0"
+              max="1"
+              step="0.01"
+              value="1.0"
+            />
+            <span id="diffuseBValue">1.00</span>
+          </label>
+
+          <h5>Specular Light Color</h5>
+          <label
+            >Specular Red
+            <input
+              type="range"
+              id="specularR"
+              min="0"
+              max="1"
+              step="0.01"
+              value="1.0"
+            />
+            <span id="specularRValue">1.00</span>
+          </label>
+          <label
+            >Specular Green
+            <input
+              type="range"
+              id="specularG"
+              min="0"
+              max="1"
+              step="0.01"
+              value="1.0"
+            />
+            <span id="specularGValue">1.00</span>
+          </label>
+          <label
+            >Specular Blue
+            <input
+              type="range"
+              id="specularB"
+              min="0"
+              max="1"
+              step="0.01"
+              value="1.0"
+            />
+            <span id="specularBValue">1.00</span>
+          </label>
+        </div>
       </div>
     </section>
 
     <section id="about">
-      <h3>Tentang Objek</h3>
+      <h3>📋 Tentang Objek</h3>
       <p>Nama Objek: <strong>Monitor PC</strong></p>
       <p>Lokasi: Lab Pemrograman 2</p>
       <p>
@@ -143,7 +312,7 @@
     </section>
 
     <section id="team">
-      <h3>Tim</h3>
+      <h3>👥 Tim</h3>
       <p><strong>Athalla Abhinaya (5025231107)</strong></p>
       <p><strong>Nicholas Abel Nathaniel (5025231098)</strong></p>
     </section>

@@ -456,6 +456,30 @@ function setLightPosition(x, y, z) {
   updateLighting();
 }
 
+// Function to set ambient light color
+function setAmbientLight(r, g, b) {
+  lightAmbient[0] = r;
+  lightAmbient[1] = g;
+  lightAmbient[2] = b;
+  updateLighting();
+}
+
+// Function to set diffuse light color
+function setDiffuseLight(r, g, b) {
+  lightDiffuse[0] = r;
+  lightDiffuse[1] = g;
+  lightDiffuse[2] = b;
+  updateLighting();
+}
+
+// Function to set specular light color
+function setSpecularLight(r, g, b) {
+  lightSpecular[0] = r;
+  lightSpecular[1] = g;
+  lightSpecular[2] = b;
+  updateLighting();
+}
+
 // Function to toggle lighting
 function toggleLighting() {
   lightingEnabled = !lightingEnabled;

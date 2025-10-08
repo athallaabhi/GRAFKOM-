@@ -74,27 +74,78 @@ window.onload = () => {
 
   // Light Position Controls
   document.getElementById("lightX").oninput = (e) => {
-    setLightPosition(
-      parseFloat(e.target.value),
-      lightPosition[1],
-      lightPosition[2]
-    );
+    const val = parseFloat(e.target.value);
+    setLightPosition(val, lightPosition[1], lightPosition[2]);
+    document.getElementById("lightXValue").textContent = val.toFixed(1);
   };
 
   document.getElementById("lightY").oninput = (e) => {
-    setLightPosition(
-      lightPosition[0],
-      parseFloat(e.target.value),
-      lightPosition[2]
-    );
+    const val = parseFloat(e.target.value);
+    setLightPosition(lightPosition[0], val, lightPosition[2]);
+    document.getElementById("lightYValue").textContent = val.toFixed(1);
   };
 
   document.getElementById("lightZ").oninput = (e) => {
-    setLightPosition(
-      lightPosition[0],
-      lightPosition[1],
-      parseFloat(e.target.value)
-    );
+    const val = parseFloat(e.target.value);
+    setLightPosition(lightPosition[0], lightPosition[1], val);
+    document.getElementById("lightZValue").textContent = val.toFixed(1);
+  };
+
+  // Ambient Light Color Controls
+  document.getElementById("ambientR").oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    setAmbientLight(val, lightAmbient[1], lightAmbient[2]);
+    document.getElementById("ambientRValue").textContent = val.toFixed(2);
+  };
+
+  document.getElementById("ambientG").oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    setAmbientLight(lightAmbient[0], val, lightAmbient[2]);
+    document.getElementById("ambientGValue").textContent = val.toFixed(2);
+  };
+
+  document.getElementById("ambientB").oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    setAmbientLight(lightAmbient[0], lightAmbient[1], val);
+    document.getElementById("ambientBValue").textContent = val.toFixed(2);
+  };
+
+  // Diffuse Light Color Controls
+  document.getElementById("diffuseR").oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    setDiffuseLight(val, lightDiffuse[1], lightDiffuse[2]);
+    document.getElementById("diffuseRValue").textContent = val.toFixed(2);
+  };
+
+  document.getElementById("diffuseG").oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    setDiffuseLight(lightDiffuse[0], val, lightDiffuse[2]);
+    document.getElementById("diffuseGValue").textContent = val.toFixed(2);
+  };
+
+  document.getElementById("diffuseB").oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    setDiffuseLight(lightDiffuse[0], lightDiffuse[1], val);
+    document.getElementById("diffuseBValue").textContent = val.toFixed(2);
+  };
+
+  // Specular Light Color Controls
+  document.getElementById("specularR").oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    setSpecularLight(val, lightSpecular[1], lightSpecular[2]);
+    document.getElementById("specularRValue").textContent = val.toFixed(2);
+  };
+
+  document.getElementById("specularG").oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    setSpecularLight(lightSpecular[0], val, lightSpecular[2]);
+    document.getElementById("specularGValue").textContent = val.toFixed(2);
+  };
+
+  document.getElementById("specularB").oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    setSpecularLight(lightSpecular[0], lightSpecular[1], val);
+    document.getElementById("specularBValue").textContent = val.toFixed(2);
   };
 
   // --- Mouse Controls for Rotation and Zoom ---
