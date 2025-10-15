@@ -1,12 +1,8 @@
 let gl;
 let shaderProgram;
-let vertexBuffer, colorBuffer, normalBuffer, texCoordBuffer;
-let indexBuffer, texturedIndexBuffer, nonTexturedIndexBuffer;
+let vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer;
 let uModelViewMatrix, uProjectionMatrix;
 let allIndices = []; // <-- BUG FIX: Moved this to the global scope
-let texturedIndices = []; // Indices for objects with textures
-let nonTexturedIndices = []; // Indices for objects without textures
-let checkerboardTexture;
 
 let projectionMatrix = mat4.create();
 
@@ -28,6 +24,18 @@ let materialShininess = 100.0;
 
 // Lighting enabled flag
 let lightingEnabled = true;
+
+// Texture properties
+let screenTexture = null;
+let useScreenTexture = false;
+let useBackCheckerboard = false;
+
+// Track object index ranges for selective texture application
+let objectRanges = {
+  screen: { start: 0, count: 0 },
+  back: { start: 0, count: 0 },
+  others: { start: 0, count: 0 },
+};
 
 function initRenderer(canvas) {
   gl = canvas.getContext("webgl");
@@ -68,15 +76,93 @@ function initRenderer(canvas) {
     shaderProgram,
     "uLightingEnabled"
   );
-  gl.useTextureLoc = gl.getUniformLocation(shaderProgram, "uUseTexture");
-  gl.textureMapLoc = gl.getUniformLocation(shaderProgram, "uTextureMap");
+
+  // Get texture uniform locations
+  gl.textureLoc = gl.getUniformLocation(shaderProgram, "uTexture");
+  gl.useScreenImageTextureLoc = gl.getUniformLocation(
+    shaderProgram,
+    "uUseScreenImageTexture"
+  );
+  gl.useBackCheckerboardLoc = gl.getUniformLocation(
+    shaderProgram,
+    "uUseBackCheckerboard"
+  );
+
+  console.log("🔧 Texture uniform locations:", {
+    texture: gl.textureLoc,
+    useScreenImage: gl.useScreenImageTextureLoc,
+    useCheckerboard: gl.useBackCheckerboardLoc,
+  });
+
+  // Load textures
+  loadTextures();
 
   initBuffers();
-  createCheckerboardTexture(); // Create checkerboard texture
   updateLighting(); // Initialize lighting
   gl.enable(gl.DEPTH_TEST);
   gl.clearColor(0.9, 0.9, 0.9, 1.0);
   requestAnimationFrame(render);
+}
+
+// Texture loading function
+function loadTextures() {
+  screenTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, screenTexture);
+
+  // Create a placeholder colored pixel while the image loads (magenta to make it obvious)
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    1,
+    1,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    new Uint8Array([255, 0, 255, 255])
+  );
+
+  // Set texture parameters for the placeholder
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+  const image = new Image();
+  image.onload = function () {
+    console.log("✅ JOKOWI.jpg loaded successfully!");
+    console.log("📐 Image dimensions:", image.width, "x", image.height);
+
+    gl.bindTexture(gl.TEXTURE_2D, screenTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+    // Check if image is power-of-two
+    const isPowerOfTwo = (value) => (value & (value - 1)) === 0;
+
+    if (isPowerOfTwo(image.width) && isPowerOfTwo(image.height)) {
+      // Power of 2: can use mipmaps
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(
+        gl.TEXTURE_2D,
+        gl.TEXTURE_MIN_FILTER,
+        gl.LINEAR_MIPMAP_LINEAR
+      );
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      console.log("✅ Using mipmaps (power-of-two texture)");
+    } else {
+      // Non-power of 2: cannot use mipmaps, must use specific wrap modes
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      console.log("⚠️ Using CLAMP_TO_EDGE (non-power-of-two texture)");
+    }
+  };
+  image.onerror = function () {
+    console.error("❌ Failed to load JOKOWI.jpg! Check the file path.");
+    console.error("Expected path: images/JOKOWI.jpg");
+  };
+  image.src = "images/JOKOWI.jpg";
+  console.log("🔄 Loading texture from: images/JOKOWI.jpg");
 }
 
 function compileShader(type, source) {
@@ -96,7 +182,7 @@ function initBuffers() {
   const wood = [0.8, 0.66, 0.53];
   const screenImgColor = [0.2, 0.2, 0.2];
 
-  // Helper function to create quad with normals (from material)
+  // Helper function to create quad with normals and texture coordinates (from material)
   function quad(
     vertices,
     normals,
@@ -108,8 +194,7 @@ function initBuffers() {
     c,
     d,
     color,
-    indexOffset,
-    useTexture = false
+    indexOffset
   ) {
     // Calculate normal using cross product (from material)
     const t1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
@@ -139,23 +224,8 @@ function initBuffers() {
     // Add colors
     colors.push(...color, ...color, ...color, ...color);
 
-    // Add texture coordinates
-    if (useTexture) {
-      // Standard texture coordinates for a quad
-      texCoords.push(
-        0.0,
-        0.0, // a
-        1.0,
-        0.0, // b
-        1.0,
-        1.0, // c
-        0.0,
-        1.0 // d
-      );
-    } else {
-      // Push dummy coordinates
-      texCoords.push(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    }
+    // Add texture coordinates (standard quad mapping)
+    texCoords.push(0, 0, 1, 0, 1, 1, 0, 1);
 
     // Add indices for two triangles
     indices.push(
@@ -170,17 +240,7 @@ function initBuffers() {
     return indexOffset + 4;
   }
 
-  const createCuboid = (
-    x,
-    y,
-    z,
-    width,
-    height,
-    depth,
-    color,
-    startIndex,
-    useTexture = false
-  ) => {
+  const createCuboid = (x, y, z, width, height, depth, color, startIndex) => {
     const hw = width / 2;
     const hh = height / 2;
     const hd = depth / 2;
@@ -202,7 +262,7 @@ function initBuffers() {
     const indices = [];
     let indexOffset = startIndex;
 
-    // Create 6 faces with proper normals
+    // Create 6 faces with proper normals and texture coordinates
     indexOffset = quad(
       vertices,
       normals,
@@ -214,8 +274,7 @@ function initBuffers() {
       v2,
       v3,
       color,
-      indexOffset,
-      useTexture
+      indexOffset
     ); // Front
     indexOffset = quad(
       vertices,
@@ -228,8 +287,7 @@ function initBuffers() {
       v7,
       v6,
       color,
-      indexOffset,
-      useTexture
+      indexOffset
     ); // Back
     indexOffset = quad(
       vertices,
@@ -242,8 +300,7 @@ function initBuffers() {
       v6,
       v2,
       color,
-      indexOffset,
-      useTexture
+      indexOffset
     ); // Right
     indexOffset = quad(
       vertices,
@@ -256,8 +313,7 @@ function initBuffers() {
       v3,
       v7,
       color,
-      indexOffset,
-      useTexture
+      indexOffset
     ); // Left
     indexOffset = quad(
       vertices,
@@ -270,8 +326,7 @@ function initBuffers() {
       v6,
       v7,
       color,
-      indexOffset,
-      useTexture
+      indexOffset
     ); // Top
     indexOffset = quad(
       vertices,
@@ -284,8 +339,7 @@ function initBuffers() {
       v1,
       v0,
       color,
-      indexOffset,
-      useTexture
+      indexOffset
     ); // Bottom
 
     return {
@@ -303,57 +357,38 @@ function initBuffers() {
   let allColors = [];
   let allTexCoords = [];
   allIndices = []; // Clear the global array before rebuilding
-  texturedIndices = []; // Clear textured indices
-  nonTexturedIndices = []; // Clear non-textured indices
   let currentIndexOffset = 0;
 
-  const addCuboidToScene = (
-    x,
-    y,
-    z,
-    width,
-    height,
-    depth,
-    color,
-    useTexture = false
-  ) => {
+  const addCuboidToScene = (x, y, z, width, height, depth, color) => {
     const { vertices, normals, colors, texCoords, indices, newIndexOffset } =
-      createCuboid(
-        x,
-        y,
-        z,
-        width,
-        height,
-        depth,
-        color,
-        currentIndexOffset,
-        useTexture
-      );
+      createCuboid(x, y, z, width, height, depth, color, currentIndexOffset);
     allVertices.push(...vertices);
     allNormals.push(...normals);
     allColors.push(...colors);
     allTexCoords.push(...texCoords);
     allIndices.push(...indices);
-
-    // Add indices to appropriate array based on texture usage
-    if (useTexture) {
-      texturedIndices.push(...indices);
-    } else {
-      nonTexturedIndices.push(...indices);
-    }
-
     currentIndexOffset = newIndexOffset;
   };
 
   // --- Monitor Components ---
   // 1. Monitor Screen Panel (the display itself)
+  const screenStart = currentIndexOffset;
   addCuboidToScene(0, 0.275, 0.05, 2.0, 1.0, 0.05, screenImgColor); // Y was 0.5
+  objectRanges.screen = {
+    start: screenStart * 3,
+    count: (currentIndexOffset - screenStart) * 3,
+  };
 
   // 2. Monitor Bezel/Frame (white, wraps around the screen panel)
   addCuboidToScene(0, 0.275, 0.035, 2.1, 1.1, 0.03, white); // Y was 0.5
 
-  // 3. Monitor Back Casing (silver, thicker part behind the frame) - WITH CHECKERBOARD TEXTURE
-  addCuboidToScene(0, 0.275, -0.05, 2.05, 1.05, 0.1, silver, true);
+  // 3. Monitor Back Casing (silver, thicker part behind the frame)
+  const backStart = currentIndexOffset;
+  addCuboidToScene(0, 0.275, -0.05, 2.05, 1.05, 0.1, silver); // Y was 0.5
+  objectRanges.back = {
+    start: backStart * 3,
+    count: (currentIndexOffset - backStart) * 3,
+  };
 
   // 4. Logo (on the back of the monitor)
   addCuboidToScene(0, 0.475, -0.105, 0.2, 0.3, 0.01, darkGrey); // Y was 0.7
@@ -450,22 +485,6 @@ function initBuffers() {
     gl.STATIC_DRAW
   );
 
-  texturedIndexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, texturedIndexBuffer);
-  gl.bufferData(
-    gl.ELEMENT_ARRAY_BUFFER,
-    new Uint16Array(texturedIndices),
-    gl.STATIC_DRAW
-  );
-
-  nonTexturedIndexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, nonTexturedIndexBuffer);
-  gl.bufferData(
-    gl.ELEMENT_ARRAY_BUFFER,
-    new Uint16Array(nonTexturedIndices),
-    gl.STATIC_DRAW
-  );
-
   const aPosition = gl.getAttribLocation(shaderProgram, "aPosition");
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
@@ -508,23 +527,97 @@ function render() {
   gl.uniformMatrix4fv(uModelViewMatrix, false, mvMatrix);
   gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
 
-  // Draw non-textured objects first
-  gl.uniform1i(gl.useTextureLoc, false);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, nonTexturedIndexBuffer);
-  gl.drawElements(
-    gl.TRIANGLES,
-    nonTexturedIndices.length,
-    gl.UNSIGNED_SHORT,
-    0
-  );
-
-  // Draw textured objects
-  gl.uniform1i(gl.useTextureLoc, true);
+  // Always bind the texture (WebGL requires a texture to be bound even if not using it)
   gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, checkerboardTexture);
-  gl.uniform1i(gl.textureMapLoc, 0);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, texturedIndexBuffer);
-  gl.drawElements(gl.TRIANGLES, texturedIndices.length, gl.UNSIGNED_SHORT, 0);
+  gl.bindTexture(gl.TEXTURE_2D, screenTexture);
+  gl.uniform1i(gl.textureLoc, 0);
+
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+  // Draw screen with texture if enabled
+  if (useScreenTexture) {
+    gl.uniform1i(gl.useScreenImageTextureLoc, true);
+    gl.uniform1i(gl.useBackCheckerboardLoc, false);
+    gl.drawElements(
+      gl.TRIANGLES,
+      objectRanges.screen.count,
+      gl.UNSIGNED_SHORT,
+      objectRanges.screen.start * 2
+    );
+  } else {
+    gl.uniform1i(gl.useScreenImageTextureLoc, false);
+    gl.uniform1i(gl.useBackCheckerboardLoc, false);
+    gl.drawElements(
+      gl.TRIANGLES,
+      objectRanges.screen.count,
+      gl.UNSIGNED_SHORT,
+      objectRanges.screen.start * 2
+    );
+  }
+
+  // Draw back with checkerboard if enabled
+  if (useBackCheckerboard) {
+    gl.uniform1i(gl.useScreenImageTextureLoc, false);
+    gl.uniform1i(gl.useBackCheckerboardLoc, true);
+    gl.drawElements(
+      gl.TRIANGLES,
+      objectRanges.back.count,
+      gl.UNSIGNED_SHORT,
+      objectRanges.back.start * 2
+    );
+  } else {
+    gl.uniform1i(gl.useScreenImageTextureLoc, false);
+    gl.uniform1i(gl.useBackCheckerboardLoc, false);
+    gl.drawElements(
+      gl.TRIANGLES,
+      objectRanges.back.count,
+      gl.UNSIGNED_SHORT,
+      objectRanges.back.start * 2
+    );
+  }
+
+  // Draw all other objects without textures
+  gl.uniform1i(gl.useScreenImageTextureLoc, false);
+  gl.uniform1i(gl.useBackCheckerboardLoc, false);
+
+  // Calculate remaining objects
+  const totalIndices = allIndices.length;
+  const screenEndIndex = objectRanges.screen.start + objectRanges.screen.count;
+  const backEndIndex = objectRanges.back.start + objectRanges.back.count;
+
+  // Draw objects before screen
+  if (objectRanges.screen.start > 0) {
+    gl.drawElements(
+      gl.TRIANGLES,
+      objectRanges.screen.start,
+      gl.UNSIGNED_SHORT,
+      0
+    );
+  }
+
+  // Draw objects between screen and back
+  const betweenStart = screenEndIndex;
+  const betweenCount = objectRanges.back.start - screenEndIndex;
+  if (betweenCount > 0) {
+    gl.drawElements(
+      gl.TRIANGLES,
+      betweenCount,
+      gl.UNSIGNED_SHORT,
+      betweenStart * 2
+    );
+  }
+
+  // Draw objects after back
+  const afterStart = backEndIndex;
+  const afterCount = totalIndices - backEndIndex;
+  if (afterCount > 0) {
+    gl.drawElements(
+      gl.TRIANGLES,
+      afterCount,
+      gl.UNSIGNED_SHORT,
+      afterStart * 2
+    );
+  }
 
   requestAnimationFrame(render);
 }
@@ -611,47 +704,16 @@ function toggleLighting() {
   return lightingEnabled;
 }
 
-// Function to create checkerboard texture
-function createCheckerboardTexture() {
-  // Create 64x64 checkerboard pattern like in example
-  var texSize = 64;
-  var numRows = 8;
-  var numCols = 8;
-  var image = new Array();
+// Function to toggle screen texture
+function toggleScreenTexture() {
+  useScreenTexture = !useScreenTexture;
+  console.log("🖼️ Screen texture:", useScreenTexture ? "ON" : "OFF");
+  return useScreenTexture;
+}
 
-  for (var i = 0; i < texSize; i++) image[i] = new Array();
-  for (var i = 0; i < texSize; i++)
-    for (var j = 0; j < texSize; j++)
-      image[i][j] = new Float32Array(4);
-
-  for (var i = 0; i < texSize; i++)
-    for (var j = 0; j < texSize; j++) {
-      var c = ((i & 0x8) == 0) ^ ((j & 0x8) == 0);
-      image[i][j] = [c, c, c, 1];
-    }
-
-  // Convert to Uint8Array
-  var image1 = new Uint8Array(4 * texSize * texSize);
-  for (var i = 0; i < texSize; i++)
-    for (var j = 0; j < texSize; j++)
-      for (var k = 0; k < 4; k++)
-        image1[4 * texSize * i + 4 * j + k] = 255 * image[i][j][k];
-
-  // Create and configure texture
-  checkerboardTexture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, checkerboardTexture);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA,
-    texSize,
-    texSize,
-    0,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    image1
-  );
-  gl.generateMipmap(gl.TEXTURE_2D);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+// Function to toggle back checkerboard
+function toggleBackCheckerboard() {
+  useBackCheckerboard = !useBackCheckerboard;
+  console.log("🔲 Checkerboard:", useBackCheckerboard ? "ON" : "OFF");
+  return useBackCheckerboard;
 }

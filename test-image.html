@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Image Test</title>
+  </head>
+  <body>
+    <h1>Testing JOKOWI.jpg</h1>
+    <p>If you see the image below, the file path is correct:</p>
+    <img
+      src="images/JOKOWI.jpg"
+      alt="JOKOWI"
+      style="max-width: 500px; border: 2px solid black"
+    />
+
+    <script>
+      const img = new Image();
+      img.onload = () => {
+        console.log("✅ Image loaded successfully!");
+        console.log("Image dimensions:", img.width, "x", img.height);
+      };
+      img.onerror = () => {
+        console.error("❌ Failed to load image!");
+      };
+      img.src = "images/JOKOWI.jpg";
+    </script>
+  </body>
+</html>

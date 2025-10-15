@@ -148,6 +148,15 @@ window.onload = () => {
     document.getElementById("specularBValue").textContent = val.toFixed(2);
   };
 
+  // Texture Toggle Controls
+  document.getElementById("screenImageToggle").onchange = function () {
+    toggleScreenTexture();
+  };
+
+  document.getElementById("backCheckerboardToggle").onchange = function () {
+    toggleBackCheckerboard();
+  };
+
   // --- Mouse Controls for Rotation and Zoom ---
   let isDragging = false;
   let lastMouseX = 0;
