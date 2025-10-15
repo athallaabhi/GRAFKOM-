@@ -365,13 +365,13 @@ function initBuffers() {
   addCuboidToScene(0, -0.825, 0.0, 0.8, 0.05, 0.5, silver); // Y was -0.6
 
   // Desk Components
-  addCuboidToScene(0, -0.9, 0, 5.0, 0.1, 4.0, wood);
+  addCuboidToScene(0, -1.0, 0, 5.0, 0.3, 4.0, wood);
 
   const legHeight = 1.5;
   const legWidth = 0.2;
   const deskX = 2.5;
   const deskZ = 2.0;
-  const deskBottomY = -1.0;
+  const deskBottomY = -0.9;
 
   addCuboidToScene(
     deskX - legWidth / 2,
